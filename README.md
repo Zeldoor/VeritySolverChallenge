@@ -4,6 +4,6 @@ Solver per l'encounter **Verity** del raid *Salvation's Edge* (Destiny 2), con s
 
 Inserisci i callout interni (es. `CQT`) e le forme delle statue esterne: il solver calcola le forme finali e il numero minimo di dissezioni.
 
-**Live:** https://<utente>.github.io/VeritySolverChallenge/
+**Live:** https://zeldoor.github.io/VeritySolverChallenge/
 
 Logica basata su [seratne/salvations-edge-verity](https://github.com/seratne/salvations-edge-verity).
