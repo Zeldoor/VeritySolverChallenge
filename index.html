@@ -60,9 +60,6 @@ input[type=text]{font-family:var(--f-mono);font-size:1.0625rem;font-weight:700;l
 .final .nm{font-family:var(--f-display);font-weight:700;font-size:1rem;color:var(--accent);letter-spacing:.03em}
 .final .cmp{font-family:var(--f-mono);font-size:0.6875rem;color:var(--muted)}
 .final.pure svg,.final.pure .nm{color:var(--gold)}
-.rot{display:flex;gap:0.375rem;flex-wrap:wrap}
-.rot .btn[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
-.rot .btn{padding:0.25rem 0.5rem;font-size:0.75rem}
 ol.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.375rem;counter-reset:s}
 ol.steps li{counter-increment:s;display:grid;grid-template-columns:1.5rem 1fr;gap:0.5rem;align-items:start}
 ol.steps li::before{content:counter(s);font-family:var(--f-mono);font-weight:700;font-size:0.75rem;width:1.375rem;height:1.375rem;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent)}
@@ -71,7 +68,9 @@ ol.steps li::before{content:counter(s);font-family:var(--f-mono);font-weight:700
 .sym{color:var(--sym);font-weight:600;display:inline-flex;align-items:center;gap:.25rem}
 .sym svg{width:1.125rem;height:1.125rem}
 .arr{color:var(--muted);font-size:1.125rem;line-height:1}
-.half{display:inline-flex;align-items:center;gap:.375rem}
+.half{display:flex;align-items:center;gap:.375rem;flex-wrap:wrap}
+.st-main{flex-direction:column;align-items:flex-start;gap:.125rem}
+.from{font-size:.6875rem;color:var(--muted)}
 .st-state{font-family:var(--f-mono);font-size:0.71875rem;color:var(--muted)}
 .msg{font-size:0.875rem;color:var(--muted)}
 .msg.err{color:var(--bad);font-weight:500}
@@ -120,7 +119,6 @@ footer a{color:var(--accent)}
     <section>
       <div class="row" style="justify-content:space-between"><h2>Forme finali</h2><span class="tag" id="pureTag" hidden>Pure</span></div>
       <div class="lanes" id="finals"></div>
-      <div class="rot" id="rotWrap" hidden></div>
     </section>
     <section>
       <h2>Passi</h2>
@@ -155,7 +153,7 @@ const sortPair=p=>p.split('').sort().join('');
 const shapeOf=p=>Object.keys(SHAPES).find(k=>SHAPES[k]===sortPair(p));
 
 // Esempio iniziale
-let state={inside:['C','S','T'],outside:['Cono','Prisma','Cilindro'],challenge:false,rot:null};
+let state={inside:['C','S','T'],outside:['Cono','Prisma','Cilindro'],challenge:false};
 try{state.challenge=localStorage.getItem('verity-challenge')==='1'}catch(e){}
 
 /* ---------- Solver ---------- */
@@ -215,8 +213,9 @@ function autoComplete(){
   }
 }
 function stepText(m){
-  const h=(l,k)=>`<span class="half"><span class="dir">${LANES[l]}</span><span class="sym">${svg(k)}${SYM[k]}</span></span>`;
-  return `<span class="st-main">${h(m.i,m.x)}<span class="arr" aria-label="scambia con">⇄</span>${h(m.j,m.y)}</span>`;
+  // simbolo -> statua di destinazione
+  const h=(k,from,to)=>`<span class="half"><span class="sym">${svg(k)}${SYM[k]}</span><span class="arr" aria-label="va a">→</span><span class="dir">${LANES[to]}</span><span class="from">(da ${LANES[from]})</span></span>`;
+  return `<span class="st-main">${h(m.x,m.i,m.j)}${h(m.y,m.j,m.i)}</span>`;
 }
 function renderResult(){
   const ch=state.challenge;
@@ -225,8 +224,7 @@ function renderResult(){
   $('pureTag').hidden=!ch;
   const ins=state.inside, out=state.outside;
   const insideOk=ins.every(Boolean)&&new Set(ins).size===3;
-  const steps=$('steps'), finals=$('finals'), rotWrap=$('rotWrap');
-  rotWrap.hidden=true;
+  const steps=$('steps'), finals=$('finals');
   if(!insideOk){
     finals.innerHTML=LANES.map(()=>'<div class="final"><span class="msg">—</span></div>').join('');
     steps.innerHTML=`<p class="msg">${ins.every(Boolean)?'<span class="msg err">I tre callout interni devono essere diversi.</span>':'Inserisci i callout interni.'}</p>`;
@@ -237,18 +235,10 @@ function renderResult(){
     const rots=pureRotations(ins);
     const outOk=out.every(Boolean);
     const sols=outOk?rots.map(t=>solve(out.map(n=>SHAPES[n]),t)):[null,null];
-    let best=state.rot;
-    if(best===null||best===undefined){
-      best=0;
-      if(outOk&&sols[0]&&sols[1]&&sols[1].length<sols[0].length) best=1;
-    }
+    // solo la rotazione pura con meno passi
+    let best=0;
+    if(outOk&&sols[1]&&(!sols[0]||sols[1].length<sols[0].length)) best=1;
     targets=rots[best]; solutions=sols[best];
-    rotWrap.hidden=false;
-    rotWrap.innerHTML=rots.map((t,r)=>{
-      const names=t.map(p=>shapeOf(p)).join(' · ');
-      const n=outOk&&sols[r]?` (${sols[r].length} passi)`:'';
-      return `<button type="button" class="btn" id="rot-${r}" data-rot="${r}" aria-pressed="${r===best}">${names}${n}</button>`;
-    }).join('')+`<span class="hint" style="flex-basis:100%">Due rotazioni pure valide; concordala con chi è dentro.</span>`;
   }else{
     targets=normalTargets(ins);
   }
@@ -276,14 +266,12 @@ document.addEventListener('click',e=>{
       state.inside=state.inside.map((v,j)=>j!==i&&v===k?'':v);
       state.inside[i]=k; autoComplete();
     }
-    state.rot=null; render();
+    render();
   }else if(b.dataset.out!==undefined){
     const i=+b.dataset.out,k=b.dataset.k;
-    state.outside[i]=state.outside[i]===k?'':k; state.rot=null; render();
-  }else if(b.dataset.rot!==undefined){
-    state.rot=+b.dataset.rot; renderResult();
+    state.outside[i]=state.outside[i]===k?'':k; render();
   }else if(b.id==='reset'){
-    state.inside=['','',''];state.outside=['','',''];state.rot=null;$('callouts').value='';render();$('callouts').focus();
+    state.inside=['','',''];state.outside=['','',''];$('callouts').value='';render();$('callouts').focus();
   }
 });
 $('callouts').addEventListener('input',e=>{
@@ -292,10 +280,10 @@ $('callouts').addEventListener('input',e=>{
   const map={C:'C',S:'S',Q:'S',T:'T'};
   state.inside=[0,1,2].map(i=>raw[i]?map[raw[i]]:'');
   if(raw.length===2) autoComplete();
-  state.rot=null; render();
+  render();
 });
 $('challenge').addEventListener('change',e=>{
-  state.challenge=e.target.checked; state.rot=null;
+  state.challenge=e.target.checked;
   try{localStorage.setItem('verity-challenge',state.challenge?'1':'0')}catch(err){}
   renderResult();
 });
