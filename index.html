@@ -70,7 +70,6 @@ ol.steps li::before{content:counter(s);font-family:var(--f-mono);font-weight:700
 .arr{color:var(--muted);font-size:1.125rem;line-height:1}
 .half{display:flex;align-items:center;gap:.375rem;flex-wrap:wrap}
 .st-main{flex-direction:column;align-items:flex-start;gap:.125rem}
-.from{font-size:.6875rem;color:var(--muted)}
 .st-state{font-family:var(--f-mono);font-size:0.71875rem;color:var(--muted)}
 .msg{font-size:0.875rem;color:var(--muted)}
 .msg.err{color:var(--bad);font-weight:500}
@@ -121,12 +120,12 @@ footer a{color:var(--accent)}
       <div class="lanes" id="finals"></div>
     </section>
     <section>
-      <h2>Passi</h2>
+      <div class="row"><h2>Passi</h2><span class="hint">simbolo → statua su cui depositarlo</span></div>
       <div id="steps"></div>
     </section>
   </div>
 
-  <footer>Logica da <a href="https://github.com/seratne/salvations-edge-verity" target="_blank" rel="noopener">seratne/salvations-edge-verity</a>, solver a passi minimi.</footer>
+  <footer>Logica da <a href="https://github.com/seratne/salvations-edge-verity" target="_blank" rel="noopener">seratne/salvations-edge-verity</a>, estesa alle forme pure.</footer>
 </main>
 
 <script>
@@ -157,32 +156,33 @@ let state={inside:['C','S','T'],outside:['Cono','Prisma','Cilindro'],challenge:f
 try{state.challenge=localStorage.getItem('verity-challenge')==='1'}catch(e){}
 
 /* ---------- Solver ---------- */
-// Dissezione: X lascia la statua i, Y lascia la statua j, si scambiano.
+// Dissezione: X depositato sulla statua i, Y sulla statua j: X e Y si scambiano.
+// Logica in stile seratne: ogni statua deposita i simboli che non le servono,
+// abbinandoli a una statua a cui servono (preferendo chi ne deve dare due).
 function solve(start,target){
-  const key=s=>s.join('|');
-  const goal=key(target.map(sortPair));
-  const s0=start.map(sortPair);
-  if(key(s0)===goal) return [];
-  const prev=new Map([[key(s0),null]]);
-  const q=[s0];
-  while(q.length){
-    const cur=q.shift();
-    for(let i=0;i<3;i++)for(let j=i+1;j<3;j++)
-      for(const x of new Set(cur[i]))for(const y of new Set(cur[j])){
-        if(x===y) continue;
-        const n=cur.slice();
-        n[i]=sortPair(cur[i].replace(x,'')+y);
-        n[j]=sortPair(cur[j].replace(y,'')+x);
-        const k=key(n);
-        if(prev.has(k)) continue;
-        prev.set(k,{from:key(cur),move:{i,x,j,y},state:n});
-        if(k===goal){
-          const path=[];let c=k;
-          while(prev.get(c)){const p=prev.get(c);path.unshift({...p.move,state:p.state});c=p.from}
-          return path;
-        }
-        q.push(n);
-      }
+  const diff=(a,b)=>{const r=a.split('');for(const c of b){const k=r.indexOf(c);if(k>=0)r.splice(k,1)}return r};
+  let cur=start.map(sortPair);const tgt=target.map(sortPair);const path=[];
+  for(let guard=0;guard<6;guard++){
+    const send=cur.map((c,i)=>diff(c,tgt[i])), need=cur.map((c,i)=>diff(tgt[i],c));
+    if(send.every(s=>!s.length)) return path;
+    let mv=null;
+    const partners=i=>[0,1,2].filter(j=>j!==i).sort((a,b)=>send[b].length-send[a].length||a-b);
+    // 1) scambio diretto: entrambi i simboli vanno dove servono
+    outer:for(let i=0;i<3;i++)for(const x of send[i])for(const j of partners(i)){
+      const y=send[j].find(y=>need[i].includes(y)&&y!==x);
+      if(need[j].includes(x)&&y){mv={i,x,j,y};break outer}
+    }
+    // 2) ciclo a tre: un simbolo va a posto, l'altro passa per una statua intermedia
+    if(!mv) outer2:for(let i=0;i<3;i++)for(const x of send[i])for(const j of partners(i)){
+      const y=send[j].find(y=>y!==x);
+      if(need[j].includes(x)&&y){mv={i,x,j,y};break outer2}
+    }
+    if(!mv) return null;
+    const n=cur.slice();
+    n[mv.i]=sortPair(cur[mv.i].replace(mv.x,'')+mv.y);
+    n[mv.j]=sortPair(cur[mv.j].replace(mv.y,'')+mv.x);
+    if(mv.i>mv.j) mv={i:mv.j,x:mv.y,j:mv.i,y:mv.x};
+    path.push({...mv,state:n});cur=n;
   }
   return null;
 }
@@ -213,9 +213,9 @@ function autoComplete(){
   }
 }
 function stepText(m){
-  // simbolo -> statua di destinazione
-  const h=(k,from,to)=>`<span class="half"><span class="sym">${svg(k)}${SYM[k]}</span><span class="arr" aria-label="va a">→</span><span class="dir">${LANES[to]}</span><span class="from">(da ${LANES[from]})</span></span>`;
-  return `<span class="st-main">${h(m.x,m.i,m.j)}${h(m.y,m.j,m.i)}</span>`;
+  // simbolo -> statua su cui depositarlo
+  const h=(k,l)=>`<span class="half"><span class="sym">${svg(k)}${SYM[k]}</span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[l]}</span></span>`;
+  return `<span class="st-main">${h(m.x,m.i)}${h(m.y,m.j)}</span>`;
 }
 function renderResult(){
   const ch=state.challenge;
