@@ -1,0 +1,305 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Verity Solver</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: due colonne fluide in rem, root font scala con il viewport, tre corsie (Sinistra, Centro, Destra) ripetute in ogni sezione come le stanze del raid */
+:root{
+  --bg:#eceef3; --panel:#f8f9fb; --line:#cfd4de; --fg:#171a22; --muted:#5b6273;
+  --accent:#5a3fd0; --accent-soft:#e6e1fb; --gold:#9a6a00; --gold-soft:#f6ecd2; --bad:#b4232c; --dir:#0b7a83; --sym:#c2410c;
+  --f-display:"Chakra Petch",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12141a; --panel:#1b1e27; --line:#2d3240; --fg:#e7e9ef; --muted:#9097a8;
+  --accent:#a593ff; --accent-soft:#2a2550; --gold:#e8b84a; --gold-soft:#3a2f14; --bad:#ff6b73; --dir:#4fd1d9; --sym:#ff9a5c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12141a; --panel:#1b1e27; --line:#2d3240; --fg:#e7e9ef; --muted:#9097a8;
+  --accent:#a593ff; --accent-soft:#2a2550; --gold:#e8b84a; --gold-soft:#3a2f14; --bad:#ff6b73; --dir:#4fd1d9; --sym:#ff9a5c; color-scheme:dark}
+*{box-sizing:border-box}
+html{font-size:clamp(16px,calc(.6vw + 1.4vh + 2px),36px);height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:0.875rem;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px;margin:0;min-height:100%;display:flex;flex-direction:column;justify-content:center}
+main{width:100%;max-width:62.5rem;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"head head" "in res" "foot foot";gap:0.75rem 1.25rem;align-items:start}
+header{grid-area:head;display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap}
+.col-in{grid-area:in;display:flex;flex-direction:column;gap:0.75rem;min-width:0}
+.result{grid-area:res}
+footer{grid-area:foot}
+h1{font-family:var(--f-display);font-size:1.375rem;letter-spacing:.04em;margin:0;text-transform:uppercase;line-height:1}
+.sub{color:var(--muted);font-size:0.75rem;margin:2px 0 0}
+.head-r{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap}
+h2{font-family:var(--f-display);font-size:0.75rem;letter-spacing:.14em;text-transform:uppercase;margin:0;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:0.375rem}
+.lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.5rem}
+.lane{display:flex;flex-direction:column;gap:0.25rem;min-width:0}
+.lane-label{font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.picks{display:flex;flex-wrap:wrap;gap:0.25rem}
+#outsideLanes .picks{display:grid;grid-template-columns:repeat(3,max-content)}
+.pick{width:2.25rem;height:2.25rem;border:1.5px solid var(--line);background:var(--panel);color:var(--fg);border-radius:0.375rem;
+  display:grid;place-items:center;cursor:pointer;padding:0;transition:border-color .12s,background .12s}
+.pick:hover{border-color:var(--muted)}
+.pick:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pick[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.pick svg{width:1.375rem;height:1.375rem}
+.pick-name{font-size:0.6875rem;color:var(--fg);min-height:0.9375rem}
+.row{display:flex;gap:0.625rem;align-items:center;flex-wrap:wrap}
+input[type=text]{font-family:var(--f-mono);font-size:1.0625rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;
+  width:7.5ch;padding:0.25rem 0.5rem;border:1.5px solid var(--line);background:var(--panel);color:var(--fg);border-radius:0.375rem}
+.hint{font-size:0.75rem;color:var(--muted)}
+.btn{font:600 0.8125rem var(--f-body);border:1.5px solid var(--line);background:var(--panel);color:var(--fg);padding:0.4375rem 0.75rem;border-radius:0.375rem;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.challenge{display:flex;gap:0.5rem;align-items:center;padding:0.375rem 0.625rem;border:1.5px solid var(--line);border-radius:0.375rem;background:var(--panel);cursor:pointer}
+.challenge.on{border-color:var(--gold);background:var(--gold-soft)}
+.challenge input{width:1rem;height:1rem;margin:0;accent-color:var(--gold);flex:none}
+.challenge b{font-family:var(--f-display);letter-spacing:.06em;text-transform:uppercase;font-size:0.8125rem}
+.result{border:1.5px solid var(--line);border-radius:0.625rem;background:var(--panel);padding:0.75rem 0.875rem;display:flex;flex-direction:column;gap:0.75rem;min-width:0}
+.final{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.final svg{width:1.75rem;height:1.75rem;color:var(--accent)}
+.final .nm{font-family:var(--f-display);font-weight:700;font-size:1rem;color:var(--accent);letter-spacing:.03em}
+.final .cmp{font-family:var(--f-mono);font-size:0.6875rem;color:var(--muted)}
+.final.pure svg,.final.pure .nm{color:var(--gold)}
+.rot{display:flex;gap:0.375rem;flex-wrap:wrap}
+.rot .btn[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.rot .btn{padding:0.25rem 0.5rem;font-size:0.75rem}
+ol.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.375rem;counter-reset:s}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:1.5rem 1fr;gap:0.5rem;align-items:start}
+ol.steps li::before{content:counter(s);font-family:var(--f-mono);font-weight:700;font-size:0.75rem;width:1.375rem;height:1.375rem;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent)}
+.st-main{font-weight:500;display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
+.dir{color:var(--dir);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:.8125rem}
+.sym{color:var(--sym);font-weight:600;display:inline-flex;align-items:center;gap:.25rem}
+.sym svg{width:1.125rem;height:1.125rem}
+.arr{color:var(--muted);font-size:1.125rem;line-height:1}
+.half{display:inline-flex;align-items:center;gap:.375rem}
+.st-state{font-family:var(--f-mono);font-size:0.71875rem;color:var(--muted)}
+.msg{font-size:0.875rem;color:var(--muted)}
+.msg.err{color:var(--bad);font-weight:500}
+.tag{font-family:var(--f-mono);font-size:0.65625rem;letter-spacing:.08em;text-transform:uppercase;padding:2px 0.375rem;border-radius:0.25rem;background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold)}
+footer{font-size:0.6875rem;color:var(--muted)}
+footer a{color:var(--accent)}
+@media (max-width:760px){
+  main{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "in" "res" "foot";gap:0.625rem}
+  .hint.long{display:none}
+}
+@media (max-width:420px){.pick{width:2rem;height:2rem}.pick svg{width:1.1875rem;height:1.1875rem}.sub{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<main>
+  <header>
+    <div>
+      <h1>Verity Solver</h1>
+      <p class="sub">Salvation's Edge, Verity. Dissezioni minime per le statue esterne.</p>
+    </div>
+    <div class="head-r">
+      <label class="challenge" id="chWrap" for="challenge" title="Forza Sfera, Cubo e Piramide. Nessuna forma pura contiene il simbolo della propria stanza.">
+        <input type="checkbox" id="challenge"><b>Challenge: forme pure</b>
+      </label>
+      <button class="btn" id="reset" type="button">Reset</button>
+    </div>
+  </header>
+
+  <div class="col-in">
+  <section>
+    <div class="row">
+      <h2>Callout interni</h2>
+      <input type="text" id="callouts" maxlength="3" placeholder="CQT" autocomplete="off" spellcheck="false" aria-label="Callout interni">
+      <span class="hint long">C, Q (o S), T. Due bastano.</span>
+    </div>
+    <div class="lanes" id="insideLanes"></div>
+  </section>
+
+  <section>
+    <h2>Callout esterni</h2>
+    <div class="lanes" id="outsideLanes"></div>
+  </section>
+  </div>
+
+  <div class="result" aria-live="polite">
+    <section>
+      <div class="row" style="justify-content:space-between"><h2>Forme finali</h2><span class="tag" id="pureTag" hidden>Pure</span></div>
+      <div class="lanes" id="finals"></div>
+      <div class="rot" id="rotWrap" hidden></div>
+    </section>
+    <section>
+      <h2>Passi</h2>
+      <div id="steps"></div>
+    </section>
+  </div>
+
+  <footer>Logica da <a href="https://github.com/seratne/salvations-edge-verity" target="_blank" rel="noopener">seratne/salvations-edge-verity</a>, solver a passi minimi.</footer>
+</main>
+
+<script>
+const LANES=['Sinistra','Centro','Destra'];
+const SYM={C:'Cerchio',S:'Quadrato',T:'Triangolo'};
+const SYM_KEYS=['C','S','T'];
+const SHAPES={ // composizione = due simboli 2D
+  Sfera:'CC',Cubo:'SS',Piramide:'TT',Cilindro:'CS',Cono:'CT',Prisma:'ST'};
+const PURE={C:'Sfera',S:'Cubo',T:'Piramide'};
+const SHAPE_ORDER=['Sfera','Cubo','Piramide','Cilindro','Cono','Prisma'];
+const ICON={
+ C:'<circle cx="12" cy="12" r="8"/>',
+ S:'<rect x="4.5" y="4.5" width="15" height="15"/>',
+ T:'<polygon points="12,3.5 20.5,19.5 3.5,19.5"/>',
+ Sfera:'<circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="8.5" ry="3"/>',
+ Cubo:'<polygon points="12,3 20,7.5 20,16.5 12,21 4,16.5 4,7.5"/><path d="M4 7.5 12 12 20 7.5M12 12v9"/>',
+ Piramide:'<path d="M12 3 3 17.5 12 21 21 17.5Z M12 3v18"/>',
+ Cilindro:'<ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12a7 2.6 0 0 0 14 0V6"/>',
+ Cono:'<path d="M12 3 5 18M12 3l7 15"/><ellipse cx="12" cy="18" rx="7" ry="2.6"/>',
+ Prisma:'<path d="M4 19 9 8 14 19Z M9 8 19 5 21 16 14 19"/>'
+};
+const svg=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+const sortPair=p=>p.split('').sort().join('');
+const shapeOf=p=>Object.keys(SHAPES).find(k=>SHAPES[k]===sortPair(p));
+
+// Esempio iniziale
+let state={inside:['C','S','T'],outside:['Cono','Prisma','Cilindro'],challenge:false,rot:null};
+try{state.challenge=localStorage.getItem('verity-challenge')==='1'}catch(e){}
+
+/* ---------- Solver ---------- */
+// Dissezione: X lascia la statua i, Y lascia la statua j, si scambiano.
+function solve(start,target){
+  const key=s=>s.join('|');
+  const goal=key(target.map(sortPair));
+  const s0=start.map(sortPair);
+  if(key(s0)===goal) return [];
+  const prev=new Map([[key(s0),null]]);
+  const q=[s0];
+  while(q.length){
+    const cur=q.shift();
+    for(let i=0;i<3;i++)for(let j=i+1;j<3;j++)
+      for(const x of new Set(cur[i]))for(const y of new Set(cur[j])){
+        if(x===y) continue;
+        const n=cur.slice();
+        n[i]=sortPair(cur[i].replace(x,'')+y);
+        n[j]=sortPair(cur[j].replace(y,'')+x);
+        const k=key(n);
+        if(prev.has(k)) continue;
+        prev.set(k,{from:key(cur),move:{i,x,j,y},state:n});
+        if(k===goal){
+          const path=[];let c=k;
+          while(prev.get(c)){const p=prev.get(c);path.unshift({...p.move,state:p.state});c=p.from}
+          return path;
+        }
+        q.push(n);
+      }
+  }
+  return null;
+}
+function normalTargets(inside){
+  return inside.map(x=>SYM_KEYS.filter(s=>s!==x).join(''));
+}
+function pureRotations(inside){ // due derangement possibili
+  return [1,2].map(off=>inside.map((_,i)=>PURE[inside[(i+off)%3]]).map(n=>SHAPES[n]));
+}
+
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+function renderPickers(){
+  $('insideLanes').innerHTML=LANES.map((l,i)=>`<div class="lane"><span class="lane-label">${l}</span>
+    <div class="picks">${SYM_KEYS.map(k=>`<button type="button" class="pick" id="in-${i}-${k}" data-in="${i}" data-k="${k}" aria-pressed="${state.inside[i]===k}" title="${SYM[k]}" aria-label="${l}: ${SYM[k]}">${svg(k)}</button>`).join('')}</div>
+    <span class="pick-name">${state.inside[i]?SYM[state.inside[i]]:''}</span></div>`).join('');
+  $('outsideLanes').innerHTML=LANES.map((l,i)=>`<div class="lane"><span class="lane-label">${l}</span>
+    <div class="picks">${SHAPE_ORDER.map(k=>`<button type="button" class="pick" id="out-${i}-${k}" data-out="${i}" data-k="${k}" aria-pressed="${state.outside[i]===k}" title="${k}" aria-label="${l}: ${k}">${svg(k)}</button>`).join('')}</div>
+    <span class="pick-name">${state.outside[i]||''}</span></div>`).join('');
+  const v=state.inside.map(k=>k?(k==='S'?'Q':k):'').join('');
+  if(document.activeElement!==$('callouts')) $('callouts').value=v;
+}
+function autoComplete(){
+  const set=state.inside.filter(Boolean);
+  if(set.length===2&&new Set(set).size===2){
+    const missing=SYM_KEYS.find(k=>!set.includes(k));
+    state.inside=state.inside.map(k=>k||missing);
+  }
+}
+function stepText(m){
+  const h=(l,k)=>`<span class="half"><span class="dir">${LANES[l]}</span><span class="sym">${svg(k)}${SYM[k]}</span></span>`;
+  return `<span class="st-main">${h(m.i,m.x)}<span class="arr" aria-label="scambia con">⇄</span>${h(m.j,m.y)}</span>`;
+}
+function renderResult(){
+  const ch=state.challenge;
+  $('chWrap').classList.toggle('on',ch);
+  $('challenge').checked=ch;
+  $('pureTag').hidden=!ch;
+  const ins=state.inside, out=state.outside;
+  const insideOk=ins.every(Boolean)&&new Set(ins).size===3;
+  const steps=$('steps'), finals=$('finals'), rotWrap=$('rotWrap');
+  rotWrap.hidden=true;
+  if(!insideOk){
+    finals.innerHTML=LANES.map(()=>'<div class="final"><span class="msg">—</span></div>').join('');
+    steps.innerHTML=`<p class="msg">${ins.every(Boolean)?'<span class="msg err">I tre callout interni devono essere diversi.</span>':'Inserisci i callout interni.'}</p>`;
+    return;
+  }
+  let targets, solutions=null;
+  if(ch){
+    const rots=pureRotations(ins);
+    const outOk=out.every(Boolean);
+    const sols=outOk?rots.map(t=>solve(out.map(n=>SHAPES[n]),t)):[null,null];
+    let best=state.rot;
+    if(best===null||best===undefined){
+      best=0;
+      if(outOk&&sols[0]&&sols[1]&&sols[1].length<sols[0].length) best=1;
+    }
+    targets=rots[best]; solutions=sols[best];
+    rotWrap.hidden=false;
+    rotWrap.innerHTML=rots.map((t,r)=>{
+      const names=t.map(p=>shapeOf(p)).join(' · ');
+      const n=outOk&&sols[r]?` (${sols[r].length} passi)`:'';
+      return `<button type="button" class="btn" id="rot-${r}" data-rot="${r}" aria-pressed="${r===best}">${names}${n}</button>`;
+    }).join('')+`<span class="hint" style="flex-basis:100%">Due rotazioni pure valide; concordala con chi è dentro.</span>`;
+  }else{
+    targets=normalTargets(ins);
+  }
+  finals.innerHTML=targets.map(p=>{const n=shapeOf(p);return `<div class="final${ch?' pure':''}">${svg(n)}<span class="nm">${n}</span><span class="cmp">${p.split('').map(k=>SYM[k]).join(' + ')}</span></div>`}).join('');
+
+  if(!out.every(Boolean)){steps.innerHTML='<p class="msg">Inserisci le tre forme esterne.</p>';return}
+  const cnt={C:0,S:0,T:0};out.forEach(n=>SHAPES[n].split('').forEach(k=>cnt[k]++));
+  if(!SYM_KEYS.every(k=>cnt[k]===2)){
+    steps.innerHTML='<p class="msg err">Forme esterne impossibili: servono esattamente due cerchi, due quadrati e due triangoli in totale. Ricontrolla i callout esterni.</p>';return;
+  }
+  const path=ch?solutions:solve(out.map(n=>SHAPES[n]),targets);
+  if(path===null){steps.innerHTML='<p class="msg err">Nessuna soluzione: callout interni o esterni probabilmente errati.</p>';return}
+  if(!path.length){steps.innerHTML='<p class="msg">Nessuna dissezione: le statue sono già corrette.</p>';return}
+  steps.innerHTML='<ol class="steps">'+path.map(m=>`<li><div>${stepText(m)}<div class="st-state">dopo: ${m.state.map(p=>shapeOf(p)).join(' · ')}</div></div></li>`).join('')+'</ol>';
+}
+function render(){renderPickers();renderResult()}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.in!==undefined){
+    const i=+b.dataset.in,k=b.dataset.k;
+    if(state.inside[i]===k) state.inside[i]='';
+    else{
+      // se un'altra corsia ha già quel simbolo, la svuoto
+      state.inside=state.inside.map((v,j)=>j!==i&&v===k?'':v);
+      state.inside[i]=k; autoComplete();
+    }
+    state.rot=null; render();
+  }else if(b.dataset.out!==undefined){
+    const i=+b.dataset.out,k=b.dataset.k;
+    state.outside[i]=state.outside[i]===k?'':k; state.rot=null; render();
+  }else if(b.dataset.rot!==undefined){
+    state.rot=+b.dataset.rot; renderResult();
+  }else if(b.id==='reset'){
+    state.inside=['','',''];state.outside=['','',''];state.rot=null;$('callouts').value='';render();$('callouts').focus();
+  }
+});
+$('callouts').addEventListener('input',e=>{
+  const raw=e.target.value.toUpperCase().replace(/[^CSQT]/g,'').slice(0,3);
+  e.target.value=raw;
+  const map={C:'C',S:'S',Q:'S',T:'T'};
+  state.inside=[0,1,2].map(i=>raw[i]?map[raw[i]]:'');
+  if(raw.length===2) autoComplete();
+  state.rot=null; render();
+});
+$('challenge').addEventListener('change',e=>{
+  state.challenge=e.target.checked; state.rot=null;
+  try{localStorage.setItem('verity-challenge',state.challenge?'1':'0')}catch(err){}
+  renderResult();
+});
+render();
+</script>
+
+</body></html>
