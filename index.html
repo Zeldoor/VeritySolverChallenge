@@ -68,9 +68,19 @@ body.ch{background:var(--ch-bg)}
 .final.pure svg,.final.pure .nm{color:var(--gold)}
 ol.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.375rem;counter-reset:s}
 ol.steps li{counter-increment:s;display:grid;grid-template-columns:1.5rem minmax(0,1fr) auto;gap:0.5rem;align-items:start}
-.toggle{display:inline-flex;align-items:center;gap:.3125rem;font-size:.75rem;color:var(--muted);cursor:pointer;margin-left:auto}
-.toggle input{width:.9375rem;height:.9375rem;margin:0;accent-color:var(--sym)}
-.diss{font-family:var(--f-mono);font-size:.625rem;color:var(--muted);border-top:1px dashed var(--line);width:100%;padding-top:.0625rem;margin-top:.0625rem}
+.settings{position:relative}
+.settings summary{list-style:none;display:inline-flex;align-items:center;gap:.375rem}
+.settings summary::-webkit-details-marker{display:none}
+.settings summary svg{width:1rem;height:1rem}
+.settings[open] summary{border-color:var(--accent);color:var(--accent)}
+.set-panel{position:absolute;right:0;top:calc(100% + .375rem);z-index:10;min-width:15rem;max-width:calc(100vw - 32px);background:var(--panel);border:1.5px solid var(--line);border-radius:.5rem;
+  box-shadow:0 8px 24px rgb(0 0 0/.18);padding:.5rem;display:flex;flex-direction:column;gap:.25rem}
+.toggle{display:grid;grid-template-columns:auto 1fr;gap:.125rem .5rem;align-items:center;padding:.375rem .5rem;border-radius:.375rem;cursor:pointer;color:var(--fg)}
+.toggle:hover{background:var(--bg)}
+.toggle input{width:1rem;height:1rem;margin:0;accent-color:var(--accent)}
+.toggle b{font-weight:600;font-size:.8125rem}
+.toggle small{grid-column:2;font-size:.6875rem;color:var(--muted)}
+.diss{width:100%;border-top:2px dashed var(--fg);opacity:.55;margin:.25rem 0}
 ol.steps li::before{content:counter(s);font-family:var(--f-mono);font-weight:700;font-size:0.75rem;width:1.375rem;height:1.375rem;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent)}
 .st-main{font-weight:500;display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
 .dir{color:var(--dir);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:.8125rem}
@@ -103,6 +113,13 @@ footer a{color:var(--accent)}
         <input type="checkbox" id="challenge"><b>Challenge: forme pure</b>
       </label>
       <button class="btn" id="reset" type="button">Reset</button>
+      <details class="settings" id="settings">
+        <summary class="btn" aria-label="Impostazioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Impostazioni</summary>
+        <div class="set-panel">
+          <label class="toggle"><input type="checkbox" id="optAdv"><b>Advanced</b><small>Giri fino a 3 simboli, anticipando quelli della dissezione dopo</small></label>
+          <label class="toggle"><input type="checkbox" id="optShapes"><b>Forme per step</b><small>Mostra le forme delle statue dopo ogni step</small></label>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -129,8 +146,7 @@ footer a{color:var(--accent)}
       <div class="lanes" id="finals"></div>
     </section>
     <section>
-      <div class="row"><h2>Passi</h2><span class="hint">simbolo → statua su cui depositarlo</span>
-        <label class="toggle" title="Raggruppa i depositi in giri fino a 3 simboli diversi, anticipando il simbolo che serve alla dissezione successiva"><input type="checkbox" id="showThird">Advanced</label></div>
+      <div class="row"><h2>Passi</h2><span class="hint">simbolo → statua su cui depositarlo</span></div>
       <div id="steps"></div>
     </section>
   </div>
@@ -163,8 +179,8 @@ const shapeOf=p=>Object.keys(SHAPES).find(k=>SHAPES[k]===sortPair(p));
 
 // Esempio iniziale
 let state={inside:['C','S','T'],outside:['Cono','Prisma','Cilindro'],challenge:false};
-state.adv=false;
-try{state.challenge=localStorage.getItem('verity-challenge')==='1';state.adv=localStorage.getItem('verity-advanced')==='1'}catch(e){}
+state.adv=false;state.shapes=true;
+try{state.challenge=localStorage.getItem('verity-challenge')==='1';state.adv=localStorage.getItem('verity-advanced')==='1';state.shapes=localStorage.getItem('verity-shapes')!=='0'}catch(e){}
 
 /* ---------- Solver ---------- */
 // Dissezione: X depositato sulla statua i, Y sulla statua j: X e Y si scambiano.
@@ -284,7 +300,8 @@ function renderResult(){
   const ch=state.challenge;
   $('chWrap').classList.toggle('on',ch);
   $('challenge').checked=ch;
-  $('showThird').checked=state.adv;
+  $('optAdv').checked=state.adv;
+  $('optShapes').checked=state.shapes;
   $('chBanner').hidden=!ch;
   document.body.classList.toggle('ch',ch);
   const ins=state.inside, out=state.outside;
@@ -326,12 +343,12 @@ function renderResult(){
     const h=d=>`<span class="half"><span class="sym">${svg(d.s)}${SYM[d.s]}</span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[d.l]}</span></span>`;
     steps.innerHTML='<ol class="steps">'+rounds.map(r=>{
       const ends=r.filter(d=>d.end);
-      const st=ends.length?`<div class="st-state">dopo: ${path[ends[ends.length-1].k].state.map(p=>shapeOf(p)).join(' · ')}</div>`:'';
-      return `<li><div><span class="st-main">${r.map(d=>h(d)+(d.end?`<span class="diss">dissezione ${d.k+1} ✓</span>`:'')).join('')}</span>${st}</div></li>`;
+      const st=state.shapes&&ends.length?`<div class="st-state">dopo: ${path[ends[ends.length-1].k].state.map(p=>shapeOf(p)).join(' · ')}</div>`:'';
+      return `<li><div><span class="st-main">${r.map((d,q)=>h(d)+(d.end&&q<r.length-1?'<span class="diss" aria-label="dissezione completata"></span>':'')).join('')}</span>${st}</div></li>`;
     }).join('')+'</ol>';
     return;
   }
-  steps.innerHTML='<ol class="steps">'+path.map(m=>`<li><div>${stepText(m)}<div class="st-state">dopo: ${m.state.map(p=>shapeOf(p)).join(' · ')}</div></div></li>`).join('')+'</ol>';
+  steps.innerHTML='<ol class="steps">'+path.map(m=>`<li><div>${stepText(m)}${state.shapes?`<div class="st-state">dopo: ${m.state.map(p=>shapeOf(p)).join(' · ')}</div>`:''}</div></li>`).join('')+'</ol>';
 }
 function render(){renderPickers();renderResult()}
 
@@ -366,7 +383,15 @@ $('challenge').addEventListener('change',e=>{
   try{localStorage.setItem('verity-challenge',state.challenge?'1':'0')}catch(err){}
   renderResult();
 });
-$('showThird').addEventListener('change',e=>{
+$('optShapes').addEventListener('change',e=>{
+  state.shapes=e.target.checked;
+  try{localStorage.setItem('verity-shapes',state.shapes?'1':'0')}catch(err){}
+  renderResult();
+});
+// chiudo la tendina impostazioni cliccando fuori o con Esc
+document.addEventListener('click',e=>{const d=$('settings');if(d.open&&!d.contains(e.target))d.open=false});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('settings').open=false});
+$('optAdv').addEventListener('change',e=>{
   state.adv=e.target.checked;
   try{localStorage.setItem('verity-advanced',state.adv?'1':'0')}catch(err){}
   renderResult();
