@@ -244,7 +244,10 @@ function groupRounds(path){
       cur.push(d);
     }
     rounds.push(cur);
-    if(!best||rounds.length<best.length) best=rounds;
+    // a parità di giri, riempio il più possibile i giri iniziali (anticipo i simboli)
+    const better=()=>{if(rounds.length!==best.length)return rounds.length<best.length;
+      for(let q=0;q<rounds.length;q++)if(rounds[q].length!==best[q].length)return rounds[q].length>best[q].length;return false};
+    if(!best||better()) best=rounds;
   }
   return best;
 }
