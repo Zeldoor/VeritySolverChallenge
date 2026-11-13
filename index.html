@@ -99,6 +99,37 @@ footer a{color:var(--accent)}
   .hint.long{display:none}
 }
 @media (max-width:420px){.pick{width:2rem;height:2rem}.pick svg{width:1.1875rem;height:1.1875rem}.sub{display:none}}
+/* Telefono: tutto in uno schermo */
+@media (max-width:600px){
+  html{font-size:15px}
+  body{justify-content:flex-start;padding-block:8px}
+  main{gap:.5rem}
+  header{flex-wrap:nowrap;gap:.5rem}
+  h1{font-size:1.125rem;white-space:nowrap}
+  .ch-banner small{display:none}
+  .head-r{flex-wrap:nowrap;gap:.375rem}
+  .m-hide{display:none}
+  .btn{padding:.375rem .5rem}
+  .challenge{padding:.3125rem .5rem}
+  .col-in{gap:.375rem}
+  section{gap:.25rem}
+  .lanes{gap:.375rem}
+  #insideLanes .pick-name{display:none}
+  .pick-name{min-height:0;font-size:.625rem}
+  .hint{display:none}
+  .result{padding:.5rem .625rem;gap:.5rem}
+  .ch-banner{margin:-.5rem -.625rem 0;padding:.25rem .625rem;flex-direction:row;gap:.5rem;align-items:baseline;font-size:.75rem}
+  .final{flex-direction:row;align-items:center;gap:.25rem}
+  .final svg{width:1.25rem;height:1.25rem}
+  .final .nm{font-size:.875rem}
+  .final .cmp{display:none}
+  ol.steps{gap:.5rem}
+  .st-main{flex-direction:row;flex-wrap:wrap;align-items:center;gap:.125rem .75rem}
+  .sym .nm{display:none}
+  .sym svg{width:1.25rem;height:1.25rem}
+  .diss{margin:.125rem 0}
+  footer{display:none}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -110,11 +141,11 @@ footer a{color:var(--accent)}
     </div>
     <div class="head-r">
       <label class="challenge" id="chWrap" for="challenge" title="Forza Sfera, Cubo e Piramide. Nessuna forma pura contiene il simbolo della propria stanza.">
-        <input type="checkbox" id="challenge"><b>Challenge: forme pure</b>
+        <input type="checkbox" id="challenge"><b>Challenge<span class="m-hide">: forme pure</span></b>
       </label>
       <button class="btn" id="reset" type="button">Reset</button>
       <details class="settings" id="settings">
-        <summary class="btn" aria-label="Impostazioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Impostazioni</summary>
+        <summary class="btn" aria-label="Impostazioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="m-hide">Impostazioni</span></summary>
         <div class="set-panel">
           <label class="toggle"><input type="checkbox" id="optAdv"><b>Advanced</b><small>Giri fino a 3 simboli, anticipando quelli della dissezione dopo</small></label>
           <label class="toggle"><input type="checkbox" id="optShapes"><b>Forme per step</b><small>Mostra le forme delle statue dopo ogni step</small></label>
@@ -241,7 +272,7 @@ function autoComplete(){
 }
 function stepText(m){
   // simbolo -> statua su cui depositarlo
-  const h=(k,l)=>`<span class="half"><span class="sym">${svg(k)}${SYM[k]}</span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[l]}</span></span>`;
+  const h=(k,l)=>`<span class="half"><span class="sym" title="${SYM[k]}">${svg(k)}<span class="nm">${SYM[k]}</span></span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[l]}</span></span>`;
   return `<span class="st-main">${h(m.x,m.i)}${h(m.y,m.j)}</span>`;
 }
 // meno giri; a parità, giri iniziali più pieni (anticipo i simboli)
@@ -340,7 +371,7 @@ function renderResult(){
   if(path===null){steps.innerHTML='<p class="msg err">Nessuna soluzione: callout interni o esterni probabilmente errati.</p>';return}
   if(!path.length){steps.innerHTML='<p class="msg">Nessuna dissezione: le statue sono già corrette.</p>';return}
   if(state.adv){
-    const h=d=>`<span class="half"><span class="sym">${svg(d.s)}${SYM[d.s]}</span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[d.l]}</span></span>`;
+    const h=d=>`<span class="half"><span class="sym" title="${SYM[d.s]}">${svg(d.s)}<span class="nm">${SYM[d.s]}</span></span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[d.l]}</span></span>`;
     steps.innerHTML='<ol class="steps">'+rounds.map(r=>{
       const ends=r.filter(d=>d.end);
       const st=state.shapes&&ends.length?`<div class="st-state">dopo: ${path[ends[ends.length-1].k].state.map(p=>shapeOf(p)).join(' · ')}</div>`:'';
