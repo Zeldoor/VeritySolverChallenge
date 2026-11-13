@@ -51,7 +51,13 @@ input[type=text]{font-family:var(--f-mono);font-size:1.0625rem;font-weight:700;l
 .btn{font:600 0.8125rem var(--f-body);border:1.5px solid var(--line);background:var(--panel);color:var(--fg);padding:0.4375rem 0.75rem;border-radius:0.375rem;cursor:pointer}
 .btn:hover{border-color:var(--muted)}
 .challenge{display:flex;gap:0.5rem;align-items:center;padding:0.375rem 0.625rem;border:1.5px solid var(--line);border-radius:0.375rem;background:var(--panel);cursor:pointer}
-.challenge.on{border-color:var(--gold);background:var(--gold-soft)}
+.challenge.on{border-color:var(--gold);background:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+.challenge.on b{color:var(--panel)}
+.challenge.on input{accent-color:var(--panel)}
+.result.ch{border-color:var(--gold);border-width:2px;box-shadow:0 0 0 4px var(--gold-soft)}
+.ch-banner{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin:-.75rem -.875rem 0;padding:.5rem .875rem;border-radius:.5rem .5rem 0 0;
+  background:var(--gold);color:var(--panel);font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.8125rem}
+.ch-banner small{font-family:var(--f-body);font-weight:500;letter-spacing:0;text-transform:none;opacity:.9}
 .challenge input{width:1rem;height:1rem;margin:0;accent-color:var(--gold);flex:none}
 .challenge b{font-family:var(--f-display);letter-spacing:.06em;text-transform:uppercase;font-size:0.8125rem}
 .result{border:1.5px solid var(--line);border-radius:0.625rem;background:var(--panel);padding:0.75rem 0.875rem;display:flex;flex-direction:column;gap:0.75rem;min-width:0}
@@ -73,7 +79,6 @@ ol.steps li::before{content:counter(s);font-family:var(--f-mono);font-weight:700
 .st-state{font-family:var(--f-mono);font-size:0.71875rem;color:var(--muted)}
 .msg{font-size:0.875rem;color:var(--muted)}
 .msg.err{color:var(--bad);font-weight:500}
-.tag{font-family:var(--f-mono);font-size:0.65625rem;letter-spacing:.08em;text-transform:uppercase;padding:2px 0.375rem;border-radius:0.25rem;background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold)}
 footer{font-size:0.6875rem;color:var(--muted)}
 footer a{color:var(--accent)}
 @media (max-width:760px){
@@ -114,9 +119,10 @@ footer a{color:var(--accent)}
   </section>
   </div>
 
-  <div class="result" aria-live="polite">
+  <div class="result" id="result" aria-live="polite">
+    <div class="ch-banner" id="chBanner" hidden><span>★ Challenge forme pure attiva</span><small>Solo Sfera, Cubo, Piramide</small></div>
     <section>
-      <div class="row" style="justify-content:space-between"><h2>Forme finali</h2><span class="tag" id="pureTag" hidden>Pure</span></div>
+      <div class="row" style="justify-content:space-between"><h2>Forme finali</h2></div>
       <div class="lanes" id="finals"></div>
     </section>
     <section>
@@ -221,7 +227,8 @@ function renderResult(){
   const ch=state.challenge;
   $('chWrap').classList.toggle('on',ch);
   $('challenge').checked=ch;
-  $('pureTag').hidden=!ch;
+  $('chBanner').hidden=!ch;
+  $('result').classList.toggle('ch',ch);
   const ins=state.inside, out=state.outside;
   const insideOk=ins.every(Boolean)&&new Set(ins).size===3;
   const steps=$('steps'), finals=$('finals');
