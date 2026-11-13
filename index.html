@@ -7,17 +7,17 @@
 /* Layout: due colonne fluide in rem, root font scala con il viewport, tre corsie (Sinistra, Centro, Destra) ripetute in ogni sezione come le stanze del raid */
 :root{
   --bg:#eceef3; --panel:#f8f9fb; --line:#cfd4de; --fg:#171a22; --muted:#5b6273;
-  --accent:#5a3fd0; --accent-soft:#e6e1fb; --gold:#9a6a00; --gold-soft:#f6ecd2; --bad:#b4232c; --dir:#0b7a83; --sym:#c2410c;
+  --accent:#5a3fd0; --accent-soft:#e6e1fb; --gold:#9a6a00; --gold-soft:#f6ecd2; --ch-bg:#f3d76b; --bad:#b4232c; --dir:#0b7a83; --sym:#c2410c;
   --f-display:"Chakra Petch",ui-sans-serif,system-ui,sans-serif;
   --f-body:"Inter",ui-sans-serif,system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#12141a; --panel:#1b1e27; --line:#2d3240; --fg:#e7e9ef; --muted:#9097a8;
-  --accent:#a593ff; --accent-soft:#2a2550; --gold:#e8b84a; --gold-soft:#3a2f14; --bad:#ff6b73; --dir:#4fd1d9; --sym:#ff9a5c; color-scheme:dark}}
+  --accent:#a593ff; --accent-soft:#2a2550; --gold:#e8b84a; --gold-soft:#3a2f14; --ch-bg:#4a3a0c; --bad:#ff6b73; --dir:#4fd1d9; --sym:#ff9a5c; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12141a; --panel:#1b1e27; --line:#2d3240; --fg:#e7e9ef; --muted:#9097a8;
-  --accent:#a593ff; --accent-soft:#2a2550; --gold:#e8b84a; --gold-soft:#3a2f14; --bad:#ff6b73; --dir:#4fd1d9; --sym:#ff9a5c; color-scheme:dark}
+  --accent:#a593ff; --accent-soft:#2a2550; --gold:#e8b84a; --gold-soft:#3a2f14; --ch-bg:#4a3a0c; --bad:#ff6b73; --dir:#4fd1d9; --sym:#ff9a5c; color-scheme:dark}
 *{box-sizing:border-box}
 html{font-size:clamp(16px,calc(.6vw + 1.4vh + 2px),36px);height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:0.875rem;line-height:1.4;
@@ -54,7 +54,7 @@ input[type=text]{font-family:var(--f-mono);font-size:1.0625rem;font-weight:700;l
 .challenge.on{border-color:var(--gold);background:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
 .challenge.on b{color:var(--panel)}
 .challenge.on input{accent-color:var(--panel)}
-.result.ch{border-color:var(--gold);border-width:2px;box-shadow:0 0 0 4px var(--gold-soft)}
+body.ch{background:var(--ch-bg)}
 .ch-banner{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin:-.75rem -.875rem 0;padding:.5rem .875rem;border-radius:.5rem .5rem 0 0;
   background:var(--gold);color:var(--panel);font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.8125rem}
 .ch-banner small{font-family:var(--f-body);font-weight:500;letter-spacing:0;text-transform:none;opacity:.9}
@@ -228,6 +228,38 @@ function stepText(m){
   const h=(k,l)=>`<span class="half"><span class="sym">${svg(k)}${SYM[k]}</span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[l]}</span></span>`;
   return `<span class="st-main">${h(m.x,m.i)}${h(m.y,m.j)}</span>`;
 }
+// meno giri; a parità, giri iniziali più pieni (anticipo i simboli)
+function roundsBetter(a,b){
+  if(a.length!==b.length) return a.length<b.length;
+  for(let q=0;q<a.length;q++) if(a[q].length!==b[q].length) return a[q].length>b[q].length;
+  return false;
+}
+// tutte le sequenze di dissezioni di lunghezza minima da start a target
+function allShortest(start,target){
+  const tgt=target.map(sortPair).join(), res=[];
+  const dfs=(cur,path,d)=>{
+    if(cur.join()===tgt){if(path.length===d)res.push(path);return}
+    if(path.length===d) return;
+    for(let i=0;i<3;i++)for(let j=i+1;j<3;j++)
+      for(const x of new Set(cur[i]))for(const y of new Set(cur[j])){
+        if(x===y) continue;
+        const n=cur.slice();
+        n[i]=sortPair(cur[i].replace(x,'')+y); n[j]=sortPair(cur[j].replace(y,'')+x);
+        dfs(n,[...path,{i,x,j,y,state:n}],d);
+      }
+  };
+  for(let d=0;d<=6&&!res.length;d++) dfs(start.map(sortPair),[],d);
+  return res;
+}
+// Advanced: tra tutte le soluzioni minime, quella che richiede meno giri
+function bestAdvanced(start,target){
+  let best=null;
+  for(const p of allShortest(start,target)){
+    const r=groupRounds(p);
+    if(!best||roundsBetter(r,best.rounds)) best={path:p,rounds:r};
+  }
+  return best;
+}
 function groupRounds(path){
   // Advanced: sequenza di depositi nell'ordine dei passi (dentro un passo l'ordine dei due è libero),
   // spezzata in giri da massimo 3 simboli diversi. Cerco l'ordinamento con meno giri.
@@ -244,10 +276,7 @@ function groupRounds(path){
       cur.push(d);
     }
     rounds.push(cur);
-    // a parità di giri, riempio il più possibile i giri iniziali (anticipo i simboli)
-    const better=()=>{if(rounds.length!==best.length)return rounds.length<best.length;
-      for(let q=0;q<rounds.length;q++)if(rounds[q].length!==best[q].length)return rounds[q].length>best[q].length;return false};
-    if(!best||better()) best=rounds;
+    if(!best||roundsBetter(rounds,best)) best=rounds;
   }
   return best;
 }
@@ -257,7 +286,7 @@ function renderResult(){
   $('challenge').checked=ch;
   $('showThird').checked=state.adv;
   $('chBanner').hidden=!ch;
-  $('result').classList.toggle('ch',ch);
+  document.body.classList.toggle('ch',ch);
   const ins=state.inside, out=state.outside;
   const insideOk=ins.every(Boolean)&&new Set(ins).size===3;
   const steps=$('steps'), finals=$('finals');
@@ -266,17 +295,22 @@ function renderResult(){
     steps.innerHTML=`<p class="msg">${ins.every(Boolean)?'<span class="msg err">I tre callout interni devono essere diversi.</span>':'Inserisci i callout interni.'}</p>`;
     return;
   }
-  let targets, solutions=null;
-  if(ch){
-    const rots=pureRotations(ins);
-    const outOk=out.every(Boolean);
-    const sols=outOk?rots.map(t=>solve(out.map(n=>SHAPES[n]),t)):[null,null];
-    // solo la rotazione pura con meno passi
-    let best=0;
-    if(outOk&&sols[1]&&(!sols[0]||sols[1].length<sols[0].length)) best=1;
-    targets=rots[best]; solutions=sols[best];
-  }else{
-    targets=normalTargets(ins);
+  // candidati: le due rotazioni pure in challenge, il target normale altrimenti
+  const cands=ch?pureRotations(ins):[normalTargets(ins)];
+  const outOk=out.every(Boolean);
+  let targets=cands[0], solutions=null, rounds=null;
+  if(outOk){
+    const start=out.map(n=>SHAPES[n]);
+    if(state.adv){
+      // ottimizzo i giri (poi le dissezioni) su tutte le soluzioni minime di ogni candidato
+      let best=null;
+      cands.forEach(t=>{const b=bestAdvanced(start,t);
+        if(b&&(!best||roundsBetter(b.rounds,best.b.rounds)||(b.rounds.length===best.b.rounds.length&&b.path.length<best.b.path.length)))best={t,b}});
+      if(best){targets=best.t;solutions=best.b.path;rounds=best.b.rounds}
+    }else{
+      // il candidato con meno passi
+      cands.forEach(t=>{const p=solve(start,t);if(p&&(!solutions||p.length<solutions.length)){targets=t;solutions=p}});
+    }
   }
   finals.innerHTML=targets.map(p=>{const n=shapeOf(p);return `<div class="final${ch?' pure':''}">${svg(n)}<span class="nm">${n}</span><span class="cmp">${p.split('').map(k=>SYM[k]).join(' + ')}</span></div>`}).join('');
 
@@ -285,12 +319,12 @@ function renderResult(){
   if(!SYM_KEYS.every(k=>cnt[k]===2)){
     steps.innerHTML='<p class="msg err">Forme esterne impossibili: servono esattamente due cerchi, due quadrati e due triangoli in totale. Ricontrolla i callout esterni.</p>';return;
   }
-  const path=ch?solutions:solve(out.map(n=>SHAPES[n]),targets);
+  const path=solutions;
   if(path===null){steps.innerHTML='<p class="msg err">Nessuna soluzione: callout interni o esterni probabilmente errati.</p>';return}
   if(!path.length){steps.innerHTML='<p class="msg">Nessuna dissezione: le statue sono già corrette.</p>';return}
   if(state.adv){
     const h=d=>`<span class="half"><span class="sym">${svg(d.s)}${SYM[d.s]}</span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[d.l]}</span></span>`;
-    steps.innerHTML='<ol class="steps">'+groupRounds(path).map(r=>{
+    steps.innerHTML='<ol class="steps">'+rounds.map(r=>{
       const ends=r.filter(d=>d.end);
       const st=ends.length?`<div class="st-state">dopo: ${path[ends[ends.length-1].k].state.map(p=>shapeOf(p)).join(' · ')}</div>`:'';
       return `<li><div><span class="st-main">${r.map(d=>h(d)+(d.end?`<span class="diss">dissezione ${d.k+1} ✓</span>`:'')).join('')}</span>${st}</div></li>`;
