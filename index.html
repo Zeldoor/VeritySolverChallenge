@@ -70,9 +70,7 @@ ol.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;g
 ol.steps li{counter-increment:s;display:grid;grid-template-columns:1.5rem minmax(0,1fr) auto;gap:0.5rem;align-items:start}
 .toggle{display:inline-flex;align-items:center;gap:.3125rem;font-size:.75rem;color:var(--muted);cursor:pointer;margin-left:auto}
 .toggle input{width:.9375rem;height:.9375rem;margin:0;accent-color:var(--sym)}
-.third{display:inline-flex;align-items:center;gap:.25rem;font-size:.6875rem;font-weight:600;padding:.125rem .375rem;border-radius:.375rem;border:1.5px solid var(--line);color:var(--muted);white-space:nowrap}
-.third svg{width:.9375rem;height:.9375rem}
-.third.yes{border-color:var(--sym);color:var(--sym)}
+.diss{font-family:var(--f-mono);font-size:.625rem;color:var(--muted);border-top:1px dashed var(--line);width:100%;padding-top:.0625rem;margin-top:.0625rem}
 ol.steps li::before{content:counter(s);font-family:var(--f-mono);font-weight:700;font-size:0.75rem;width:1.375rem;height:1.375rem;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent)}
 .st-main{font-weight:500;display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
 .dir{color:var(--dir);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:.8125rem}
@@ -132,7 +130,7 @@ footer a{color:var(--accent)}
     </section>
     <section>
       <div class="row"><h2>Passi</h2><span class="hint">simbolo → statua su cui depositarlo</span>
-        <label class="toggle"><input type="checkbox" id="showThird">Terzo simbolo</label></div>
+        <label class="toggle" title="Raggruppa i depositi in giri fino a 3 simboli diversi, anticipando il simbolo che serve alla dissezione successiva"><input type="checkbox" id="showThird">Advanced</label></div>
       <div id="steps"></div>
     </section>
   </div>
@@ -165,8 +163,8 @@ const shapeOf=p=>Object.keys(SHAPES).find(k=>SHAPES[k]===sortPair(p));
 
 // Esempio iniziale
 let state={inside:['C','S','T'],outside:['Cono','Prisma','Cilindro'],challenge:false};
-state.third=true;
-try{state.challenge=localStorage.getItem('verity-challenge')==='1';state.third=localStorage.getItem('verity-third')!=='0'}catch(e){}
+state.adv=false;
+try{state.challenge=localStorage.getItem('verity-challenge')==='1';state.adv=localStorage.getItem('verity-advanced')==='1'}catch(e){}
 
 /* ---------- Solver ---------- */
 // Dissezione: X depositato sulla statua i, Y sulla statua j: X e Y si scambiano.
@@ -230,20 +228,31 @@ function stepText(m){
   const h=(k,l)=>`<span class="half"><span class="sym">${svg(k)}${SYM[k]}</span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[l]}</span></span>`;
   return `<span class="st-main">${h(m.x,m.i)}${h(m.y,m.j)}</span>`;
 }
-function thirdTag(path,k){
-  // il simbolo non usato in questo passo: conviene prenderlo se serve al passo dopo
-  const m=path[k], z=SYM_KEYS.find(s=>s!==m.x&&s!==m.y), nx=path[k+1];
-  if(nx&&(nx.x===z||nx.y===z)){
-    const l=nx.x===z?nx.i:nx.j;
-    return `<span class="third yes" title="${SYM[z]} serve al passo ${k+2}: prendilo ora per anticipare">${svg(z)}Prendi ${SYM[z]} → ${LANES[l]}</span>`;
+function groupRounds(path){
+  // Advanced: sequenza di depositi nell'ordine dei passi (dentro un passo l'ordine dei due è libero),
+  // spezzata in giri da massimo 3 simboli diversi. Cerco l'ordinamento con meno giri.
+  let best=null;
+  for(let mask=0;mask<1<<path.length;mask++){
+    const seq=[];
+    path.forEach((m,k)=>{
+      const a={k:k,s:m.x,l:m.i},b={k:k,s:m.y,l:m.j};
+      const pair=mask>>k&1?[b,a]:[a,b];pair[1].end=true;seq.push({...pair[0],end:false},{...pair[1],end:true});
+    });
+    const rounds=[];let cur=[];
+    for(const d of seq){
+      if(cur.length===3||cur.some(c=>c.s===d.s)){rounds.push(cur);cur=[]}
+      cur.push(d);
+    }
+    rounds.push(cur);
+    if(!best||rounds.length<best.length) best=rounds;
   }
-  return `<span class="third" title="${SYM[z]} non serve al passo ${nx?k+2:'successivo'}">${svg(z)}${SYM[z]} inutile</span>`;
+  return best;
 }
 function renderResult(){
   const ch=state.challenge;
   $('chWrap').classList.toggle('on',ch);
   $('challenge').checked=ch;
-  $('showThird').checked=state.third;
+  $('showThird').checked=state.adv;
   $('chBanner').hidden=!ch;
   $('result').classList.toggle('ch',ch);
   const ins=state.inside, out=state.outside;
@@ -276,7 +285,16 @@ function renderResult(){
   const path=ch?solutions:solve(out.map(n=>SHAPES[n]),targets);
   if(path===null){steps.innerHTML='<p class="msg err">Nessuna soluzione: callout interni o esterni probabilmente errati.</p>';return}
   if(!path.length){steps.innerHTML='<p class="msg">Nessuna dissezione: le statue sono già corrette.</p>';return}
-  steps.innerHTML='<ol class="steps">'+path.map((m,k)=>`<li><div>${stepText(m)}<div class="st-state">dopo: ${m.state.map(p=>shapeOf(p)).join(' · ')}</div></div>${state.third?thirdTag(path,k):''}</li>`).join('')+'</ol>';
+  if(state.adv){
+    const h=d=>`<span class="half"><span class="sym">${svg(d.s)}${SYM[d.s]}</span><span class="arr" aria-label="su">→</span><span class="dir">${LANES[d.l]}</span></span>`;
+    steps.innerHTML='<ol class="steps">'+groupRounds(path).map(r=>{
+      const ends=r.filter(d=>d.end);
+      const st=ends.length?`<div class="st-state">dopo: ${path[ends[ends.length-1].k].state.map(p=>shapeOf(p)).join(' · ')}</div>`:'';
+      return `<li><div><span class="st-main">${r.map(d=>h(d)+(d.end?`<span class="diss">dissezione ${d.k+1} ✓</span>`:'')).join('')}</span>${st}</div></li>`;
+    }).join('')+'</ol>';
+    return;
+  }
+  steps.innerHTML='<ol class="steps">'+path.map(m=>`<li><div>${stepText(m)}<div class="st-state">dopo: ${m.state.map(p=>shapeOf(p)).join(' · ')}</div></div></li>`).join('')+'</ol>';
 }
 function render(){renderPickers();renderResult()}
 
@@ -312,8 +330,8 @@ $('challenge').addEventListener('change',e=>{
   renderResult();
 });
 $('showThird').addEventListener('change',e=>{
-  state.third=e.target.checked;
-  try{localStorage.setItem('verity-third',state.third?'1':'0')}catch(err){}
+  state.adv=e.target.checked;
+  try{localStorage.setItem('verity-advanced',state.adv?'1':'0')}catch(err){}
   renderResult();
 });
 render();
